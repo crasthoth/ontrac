@@ -25,6 +25,7 @@ tracknums = ','.join(sys.argv[1:])
 
 
 # Retrieve status
+# TODO: multithread check each item in the list
 def getStatus(tracknums):
     url = 'https://amway.narvar.com/amway/tracking/ontrac?tracking_numbers={}&locale=en_US'.format(tracknums)
     browser = webdriver.PhantomJS()
@@ -37,7 +38,6 @@ def getStatus(tracknums):
     #print("Status: {}".format(trackElem))
     return trackElem
 
-# TODO: Compare Status
 def sendUpdates(tracknums,status,tophone = local_settings.phone):
 
     #account_sid = 'your_sid'
@@ -58,9 +58,14 @@ def sendUpdates(tracknums,status,tophone = local_settings.phone):
     #print(message.sid)
     return
 
-cont = True
-while cont:
-    sleep(2)
+c = True
+while c:
+    # TIMER BLOCK - to vary the time between server requests
+    t = 0
+    #from random import randint
+    #t = randint(0,60)
+    #print('Sleeping {} + x seconds.'.format(t))
+    sleep(t + 30) # this sleep to pause between requests
     if 'status' in locals():
         oldstatus = status
     else:
@@ -70,6 +75,6 @@ while cont:
         print("UPDATE: {}".format(status))
         sendUpdates(tracknums,status)
         if status == 'Delivered':
-            kill = False
+            c = False
             print("Delivered, exiting...")
             exit()
