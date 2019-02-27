@@ -1,9 +1,11 @@
 #! python3
-# ontrac.py - Checks ontrac shipping website for tracking updates.
+# ontrac.py - Checks ontrac shipping website for tracking updates, then sends via sms.
 import sys
 from time import sleep
 from bs4 import BeautifulSoup
+import local_settings
 
+# Download the helper library from https://www.twilio.com/docs/python/install
 from twilio.rest import Client
 
 # Only needed for requests module page fetching
@@ -36,9 +38,15 @@ def getStatus(tracknums):
     return trackElem
 
 # TODO: Compare Status
-def sendUpdates(tracknums,status,tophone='+13608272736'):
-    account_sid = 'ACba0b39393ba93b85fd80874bb1893e0c'
-    auth_token = '5567606e1eb40029c030d53f251bf7eb'
+def sendUpdates(tracknums,status,tophone = local_settings.phone):
+
+    #account_sid = 'your_sid'
+    #auth_token = 'your_token'
+
+    # Import credentials from credentials.py library 'auth'
+    account_sid = local_settings.twilioauth['account_sid']
+    auth_token = local_settings.twilioauth['auth_token']
+
     client = Client(account_sid, auth_token)
 
     message = client.messages \
