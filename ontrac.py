@@ -1,80 +1,91 @@
 #! python3
 # ontrac.py - Checks ontrac shipping website for tracking updates, then sends via sms.
-import sys
-from time import sleep
-from bs4 import BeautifulSoup
-import local_settings
+import sys, os
+from time import sleep # only needed to add delay between server requests
+import local_settings # library of personal info that is .gitignore
+
+# BeautifulSoup is only needed for parsing and HTML response
+#from bs4 import BeautifulSoup
 
 # Download the helper library from https://www.twilio.com/docs/python/install
 from twilio.rest import Client
 
 # Only needed for requests module page fetching
-#import requests
+import requests
 
 # Only needed for selenium page fetching. also requires PhantomJS
-from selenium import webdriver
+#from selenium import webdriver
 
+# for parsing JSON
+import json
+
+# --------------END DEPENDENCIES--------------
+
+# TODO: change this to come in as a list and multithread will break it apart and try each tracking number individually
+# TODO: figure out how the json return happens for multiple tracking numbers
 tracknums = ','.join(sys.argv[1:])
 
-# Abandoned code since requests was getting a loading page, probably JS issue.
-# Much faster, Will implement in the future if a way is discovered
-#res = requests.get(url)
-#res.raise_for_status()
-#soup = bs4.BeautifulSoup(res.text, 'lxml')
+# Much faster, trying to parse immediate json response instead of using PhantomJS
+# TODO: send requests to https://amway.narvar.com/trackinginfo/amway/ontrac?tracking_numbers=C000000000
+def requeststatus(tracknums):
+    url = 'https://amway.narvar.com/amway/trackinginfo/ontrac?tracking_numbers={}'.format(tracknums)
 
+    res = requests.get(url)
+    res.raise_for_status()
+    parsed_json = json.loads(res.text)
+    return parsed_json['status']
 
+# PhantomJS handler deprecated with JSON requests; html parsing not necessary
+# def phantomgetstatus(tracknums):
+#     #url = 'https://amway.narvar.com/amway/tracking/ontrac?tracking_numbers={}&locale=en_US'.format(tracknums)
+#     url = 'https://amway.narvar.com/amway/trackinginfo/ontrac?tracking_numbers={}'.format(tracknums)
+#     browser = webdriver.PhantomJS()
+#     print("Fetching {}".format(url))
+#     browser.get(url)
+#     html = browser.page_source
+#     #print("Parsing page")
+#     soup = BeautifulSoup(html, 'lxml')
+#     trackstatus = soup.select('tracking-status h2')[0].text
+#     #print("Status: {}".format(trackstatus))
+#     return trackstatus
 
-# Retrieve status
-# TODO: multithread check each item in the list
-def getStatus(tracknums):
-    url = 'https://amway.narvar.com/amway/tracking/ontrac?tracking_numbers={}&locale=en_US'.format(tracknums)
-    browser = webdriver.PhantomJS()
-    #print("Fetching {}".format(url))
-    browser.get(url)
-    html = browser.page_source
-    #print("Parsing page")
-    soup = BeautifulSoup(html, 'lxml')
-    trackElem = soup.select('tracking-status h2')[0].text
-    #print("Status: {}".format(trackElem))
-    return trackElem
-
-def sendUpdates(tracknums,status,tophone = local_settings.phone):
-
-    #account_sid = 'your_sid'
-    #auth_token = 'your_token'
-
-    # Import credentials from credentials.py library 'auth'
+# TODO: multithread check each item in the tracking num list
+def sendupdates(message,tophone = local_settings.tophone, fromphone = local_settings.fromphone):
     account_sid = local_settings.twilioauth['account_sid']
     auth_token = local_settings.twilioauth['auth_token']
-
     client = Client(account_sid, auth_token)
 
-    message = client.messages \
-                    .create(
-                        body = "-\nPackage Update\nOnTrac Number: {}\nStatus: {}".format(tracknums,status),
-                        from_ = '+13603472944',
-                        to = tophone
-                    )
+    sendmessage = client.messages \
+    .create(
+        body = message,
+        from_ = fromphone,
+        to = tophone
+    )
     #print(message.sid)
     return
 
 c = True
 while c:
-    # TIMER BLOCK - to vary the time between server requests
-    t = 0
-    #from random import randint
-    #t = randint(0,60)
-    #print('Sleeping {} + x seconds.'.format(t))
-    sleep(t + 30) # this sleep to pause between requests
     if 'status' in locals():
         oldstatus = status
     else:
         oldstatus = ''
-    status = getStatus(tracknums)
+        status = requeststatus(tracknums)
     if status != oldstatus:
         print("UPDATE: {}".format(status))
-        sendUpdates(tracknums,status)
-        if status == 'Delivered':
-            c = False
-            print("Delivered, exiting...")
-            exit()
+        print("Sending update to {}".format(local_settings.tophone))
+        message = "-\nPackage Update\nOnTrac Number: {}\nStatus: {}".format(tracknums,status)
+        sendupdates(message)
+    if status == 'Delivered':
+        c = False
+        try:
+            os.remove('ghostdriver.log')
+        except:
+            pass
+        print("Delivered, exiting...")
+    else:
+        # TIMER BLOCK - to vary the time between server requests
+        print('Sleeping...')
+        #from random import randint
+        #sleep(randint(0,120))
+        sleep(local_settings.delay) # this sleep to pause between requests
