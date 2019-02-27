@@ -1,5 +1,5 @@
 #! python3
- # ontrac.py - Checks ontrac shipping website for tracking updates.
+# ontrac.py - Checks ontrac shipping website for tracking updates.
 import sys
 from time import sleep
 from bs4 import BeautifulSoup
