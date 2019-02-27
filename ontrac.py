@@ -33,6 +33,7 @@ def requeststatus(tracknums):
     res = requests.get(url)
     res.raise_for_status()
     parsed_json = json.loads(res.text)
+    #print(parsed_json)
     return parsed_json['status']
 
 # PhantomJS handler deprecated with JSON requests; html parsing not necessary
