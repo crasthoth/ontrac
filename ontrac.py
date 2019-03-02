@@ -39,7 +39,8 @@ def requeststatus(tracknums):
     #print(parsed_json)
     return parsed_json['status']
 
-# PhantomJS handler deprecated with JSON requests; html parsing not necessary
+# PhantomJS handler deprecated with JSON requests; JS rendered html parsing not necessary
+# There is apparently a way to use the htmllib library to do fast, lightweight JS rendered HTML scraping. May investigate later
 # def phantomgetstatus(tracknums):
 #     #url = 'https://amway.narvar.com/amway/tracking/ontrac?tracking_numbers={}&locale=en_US'.format(tracknums)
 #     url = 'https://amway.narvar.com/amway/trackinginfo/ontrac?tracking_numbers={}'.format(tracknums)
